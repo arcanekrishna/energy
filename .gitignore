@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (large files — user downloads separately)
+data/raw/
+data/processed/*.csv
+data/processed/*.json
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Study outputs
+studies/phase0_feasibility/figures/
+
+# Credentials
+kaggle.json
+*.key
+*.secret
