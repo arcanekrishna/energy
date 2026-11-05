@@ -57,6 +57,30 @@ This repository implements an end-to-end econometric and machine learning framew
 
 ---
 
+## 🎓 Academic Core Submission: Applied Probability Distributions (THM6242)
+
+This repository serves a dual role: it contains our complete **Production-Grade Automated Capstone Platform** and hosts the dedicated **Theoretical Probability Foundation** developed for academic assessment at **Symbiosis Statistical Institute (SSI), Symbiosis International (Deemed University)** for Course **Applied Probability Distributions (THM6242)** under the mentorship of **Dr. Monika Vishnoi**.
+
+All academic deliverables are neatly packaged in [`academic_submission/`](academic_submission/):
+
+| Academic Deliverable | File Path | Format & Extent | Key Curriculum Requirements Fulfilled |
+| :--- | :--- | :--- | :--- |
+| **Comprehensive Academic Project Report** | [`academic_submission/reports/Group05_Title05_Report.docx`](academic_submission/reports/Group05_Title05_Report.docx)<br>[`Group05_Title05_Report.pdf`](academic_submission/reports/Group05_Title05_Report.pdf) | Word (.docx) & PDF (A4, 12pt, 1.5 spacing, 22–25 pages) | Covers Units 1–5, formal proofs, step-by-step hand calculation, 9 tables, 6 figures, real-world grid interpretations. |
+| **Practical Jupyter Notebook** | [`notebooks/SSI_THM6242_Applied_Probability_Project.ipynb`](notebooks/SSI_THM6242_Applied_Probability_Project.ipynb) | Executed `.ipynb` (Local & Google Colab compatible) | From-scratch NumPy algorithms cross-verified against `scipy.stats`; runs top-to-bottom with pre-rendered outputs. |
+| **Presentation Slide Deck** | [`academic_submission/presentation/Group05_Title05_Presentation.pptx`](academic_submission/presentation/Group05_Title05_Presentation.pptx) | PowerPoint (15 Widescreen Slides) | Follows exact SSI Section 5 presentation order for a 10-minute presentation and viva. |
+| **Viva Defense & Theory Guide** | [`academic_submission/viva_prep/VIVA_PREPARATION_AND_DEFENSE_GUIDE.md`](academic_submission/viva_prep/VIVA_PREPARATION_AND_DEFENSE_GUIDE.md) | Markdown Reference | Comprehensive Q&A cheat sheet addressing anticipated examiner questions on parameter choices, code lines, $\chi^2$ values, and Units 1–4 fundamentals. |
+| **Student Declaration Sheet** | [`academic_submission/declaration/Student_Declaration_and_Contribution_Sheet.docx`](academic_submission/declaration/Student_Declaration_and_Contribution_Sheet.docx) | Word (.docx) | Formal academic integrity declaration and team task responsibility matrix. |
+| **Data Provenance & Citations** | [`academic_submission/data_citation/DATA_CITATIONS_AND_SOURCES.md`](academic_submission/data_citation/DATA_CITATIONS_AND_SOURCES.md) | Markdown Reference | Full academic citations and download links for IEX, CERC, and Grid-India datasets. |
+
+### Summary of Theoretical Probability Findings:
+1. **Unit 1 (Expectation & Conditional Expectation):** Day-Ahead market imbalance explains **49.10% of total real-time price variance** via the Law of Total Variance. Conditional mean jumps from ₹1,837 to ₹7,408/MWh (**4.03x surge**).
+2. **Unit 2 (Discrete Spike Modeling):** Daily spike counts exhibit severe overdispersion ($\text{Var}/\text{Mean} = 20.51$). Poisson fails; Negative Binomial ($\hat{r} = 1.795, \hat{p} = 0.0488$) captures transmission and generator outage clustering.
+3. **Unit 2 (Continuous Densities):** Positive clearing prices fit Two-Parameter Gamma ($\hat{\alpha} = 1.9144, \hat{\theta} = 2952.85$) and Weibull ($\hat{c} = 1.5831, \hat{\lambda} = 6272.61$) densities, derived from scratch and verified with `scipy.stats`.
+4. **Unit 3 (Sampling Distributions):** Welch's $t$-test confirms Evening Ramp prices are decisively higher than Mid-day Solar ($t = 46.80, p < 10^{-200}$) and 5.80x more volatile ($F = 5.80, p < 10^{-15}$). $\chi^2 = 6,943.23$ demonstrates that 88.37% of divergence is driven by CERC's ₹10,000 regulatory price ceiling.
+5. **Unit 4 (Order Statistics & CLT):** Intra-day maximum order statistic $X_{(96)}$ hits the ₹10,000 ceiling in **90.32% of trading days**. Aggregated procurement sums converge to Gaussianity (kurtosis drops from $-1.571$ to $+0.094$), validating classical portfolio VaR budgeting under the Central Limit Theorem.
+
+---
+
 ## 2. Dataset Inventory & Exact Features Processed
 
 All raw datasets are located in `data/raw/` and processed via `src/data_pipeline/`:
