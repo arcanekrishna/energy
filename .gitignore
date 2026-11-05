@@ -24,8 +24,7 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Data (large files — user downloads separately)
-data/raw/
+# Data
 data/processed/*.csv
 data/processed/*.json
 !data/raw/.gitkeep
