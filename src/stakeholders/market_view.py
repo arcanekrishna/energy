@@ -49,9 +49,22 @@ class MarketRiskView:
         quantile_forecasts_df: pd.DataFrame,
         spike_probabilities: np.ndarray | pd.Series,
     ) -> None:
-        self._validate_inputs(quantile_forecasts_df, spike_probabilities)
+        df_clean = quantile_forecasts_df.copy()
+        # Normalize column aliases like q_10 -> q10
+        alias_map = {
+            "q_10": "q10", "q_25": "q25", "q_50": "q50", "q_75": "q75", "q_90": "q90", "q_99": "q99",
+            "0.1": "q10", "0.25": "q25", "0.5": "q50", "0.75": "q75", "0.9": "q90", "0.99": "q99"
+        }
+        df_clean.rename(columns={k: v for k, v in alias_map.items() if k in df_clean.columns}, inplace=True)
+        # If q25 or q75 missing, interpolate
+        if "q25" not in df_clean.columns and "q10" in df_clean.columns and "q50" in df_clean.columns:
+            df_clean["q25"] = (df_clean["q10"] + df_clean["q50"]) / 2.0
+        if "q75" not in df_clean.columns and "q50" in df_clean.columns and "q90" in df_clean.columns:
+            df_clean["q75"] = (df_clean["q50"] + df_clean["q90"]) / 2.0
 
-        self.forecasts: pd.DataFrame = quantile_forecasts_df.copy()
+        self._validate_inputs(df_clean, spike_probabilities)
+
+        self.forecasts: pd.DataFrame = df_clean
         self.spike_prob: np.ndarray = np.asarray(spike_probabilities, dtype=np.float64)
 
         # Pre-compute percentile ranks for composite score

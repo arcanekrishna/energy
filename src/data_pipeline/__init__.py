@@ -16,12 +16,10 @@ try:
         validate_record,
     )
     from .iex_loader import (
-        load_dam_from_kaggle,
-        load_mendeley_demand,
-        load_rtm_from_csv,
-        load_zenodo_weather,
-        merge_dam_rtm,
-        standardize_columns,
+        load_dam_historical_xlsx,
+        load_market_snapshot,
+        load_scada_renewables_timeseries,
+        merge_real_dam_rtm_snapshots,
     )
     from .synthetic_generator import (
         generate_full_synthetic,
@@ -45,12 +43,10 @@ except ImportError:
         validate_record,
     )
     from src.data_pipeline.iex_loader import (
-        load_dam_from_kaggle,
-        load_mendeley_demand,
-        load_rtm_from_csv,
-        load_zenodo_weather,
-        merge_dam_rtm,
-        standardize_columns,
+        load_dam_historical_xlsx,
+        load_market_snapshot,
+        load_scada_renewables_timeseries,
+        merge_real_dam_rtm_snapshots,
     )
     from src.data_pipeline.synthetic_generator import (
         generate_full_synthetic,
@@ -74,12 +70,10 @@ __all__ = [
     "session_to_blocks",
     "validate_record",
     # loaders
-    "standardize_columns",
-    "load_dam_from_kaggle",
-    "load_rtm_from_csv",
-    "load_mendeley_demand",
-    "load_zenodo_weather",
-    "merge_dam_rtm",
+    "load_market_snapshot",
+    "load_dam_historical_xlsx",
+    "load_scada_renewables_timeseries",
+    "merge_real_dam_rtm_snapshots",
     # synthetic
     "generate_synthetic_rtm",
     "generate_full_synthetic",

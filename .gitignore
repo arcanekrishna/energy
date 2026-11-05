@@ -25,10 +25,12 @@ ENV/
 Thumbs.db
 
 # Data
-data/processed/*.csv
-data/processed/*.json
+data/processed/dam_historical_2018_2024.csv
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+!data/processed/real_dam_rtm_synchronized.csv
+!data/processed/grid_scada_resampled_15min.csv
+!data/processed/dataset_summary.json
 
 # Jupyter
 .ipynb_checkpoints/
@@ -38,8 +40,8 @@ data/processed/*.json
 .coverage
 htmlcov/
 
-# Study outputs
-studies/phase0_feasibility/figures/
+# Study outputs (figures are tracked for research reporting)
+!studies/phase0_feasibility/figures/*.png
 
 # Credentials
 kaggle.json

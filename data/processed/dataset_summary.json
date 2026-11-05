@@ -1,0 +1,27 @@
+{
+  "synchronized_snapshots": {
+    "total_blocks": 2916,
+    "start_date": "2026-10-03",
+    "end_date": "2026-11-02",
+    "dam_mcp_mean_rs_mwh": 6498.491289437587,
+    "rtm_mcp_mean_rs_mwh": 5596.758302469136,
+    "mean_spread_rs_mwh": -901.7329869684498,
+    "spike_rate_pct": 35.35665294924554
+  },
+  "scada_telemetry": {
+    "total_15min_blocks": 11712,
+    "start_date": "2022-04-01",
+    "end_date": "2023-08-31",
+    "mean_demand_mw": 186560.66211994409,
+    "max_solar_mw": 42868.24700520833,
+    "mean_net_demand_mw": 166047.34446486045,
+    "max_evening_ramp_mw_15min": 59351.0529092153
+  },
+  "historical_dam": {
+    "total_blocks": 233760,
+    "start_date": "2018-01-01",
+    "end_date": "2024-08-31",
+    "mean_dam_mcp_rs_mwh": 4133.6516954141,
+    "p90_dam_mcp_rs_mwh": 8000.94
+  }
+}

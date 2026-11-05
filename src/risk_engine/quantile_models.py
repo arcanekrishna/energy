@@ -84,11 +84,15 @@ class QuantileForecaster:
     def __init__(
         self,
         quantiles: Optional[List[float]] = None,
+        model_params: Optional[Dict] = None,
+        **kwargs,
     ) -> None:
         self.quantiles: List[float] = quantiles or [
             0.10, 0.25, 0.50, 0.75, 0.90, 0.99
         ]
         self._validate_quantiles()
+        self.custom_params: Dict = model_params or {}
+        self.custom_params.update(kwargs)
         self.models_: Dict[float, object] = {}
         self._fitted: bool = False
 
@@ -113,15 +117,16 @@ class QuantileForecaster:
 
         Uses LightGBM when available, else sklearn's GBR.
         """
+        p = {**self._DEFAULT_PARAMS, **self.custom_params}
         if _HAS_LIGHTGBM:
             return lgb.LGBMRegressor(
                 objective="quantile",
                 alpha=quantile,
-                n_estimators=self._DEFAULT_PARAMS["n_estimators"],
-                max_depth=self._DEFAULT_PARAMS["max_depth"],
-                learning_rate=self._DEFAULT_PARAMS["learning_rate"],
-                min_child_samples=self._DEFAULT_PARAMS["min_child_samples"],
-                subsample=self._DEFAULT_PARAMS["subsample"],
+                n_estimators=int(p["n_estimators"]),
+                max_depth=int(p["max_depth"]),
+                learning_rate=float(p["learning_rate"]),
+                min_child_samples=int(p["min_child_samples"]),
+                subsample=float(p["subsample"]),
                 random_state=42,
                 verbose=-1,
                 n_jobs=-1,
@@ -131,11 +136,11 @@ class QuantileForecaster:
             return GradientBoostingRegressor(
                 loss="quantile",
                 alpha=quantile,
-                n_estimators=int(self._DEFAULT_PARAMS["n_estimators"]),
-                max_depth=int(self._DEFAULT_PARAMS["max_depth"]),
-                learning_rate=float(self._DEFAULT_PARAMS["learning_rate"]),
-                min_samples_leaf=int(self._DEFAULT_PARAMS["min_child_samples"]),
-                subsample=float(self._DEFAULT_PARAMS["subsample"]),
+                n_estimators=int(p["n_estimators"]),
+                max_depth=int(p["max_depth"]),
+                learning_rate=float(p["learning_rate"]),
+                min_samples_leaf=int(p["min_child_samples"]),
+                subsample=float(p["subsample"]),
                 random_state=42,
             )
 

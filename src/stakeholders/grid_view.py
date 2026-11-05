@@ -52,10 +52,10 @@ class GridRiskView:
     """
 
     # Canonical column names (lowercase)
-    _PURCHASE_COLS = ("purchase_bid_dam", "purchase_bid")
-    _SELL_COLS = ("sell_bid_dam", "sell_bid")
-    _RTM_PURCHASE_COLS = ("rtm_purchase_bid",)
-    _RTM_SELL_COLS = ("rtm_sell_bid",)
+    _PURCHASE_COLS = ("purchase_bid_dam", "purchase_bid", "dam_purchase_bid", "dam_purchase_bid_mw")
+    _SELL_COLS = ("sell_bid_dam", "sell_bid", "dam_sell_bid", "dam_sell_bid_mw")
+    _RTM_PURCHASE_COLS = ("rtm_purchase_bid", "rtm_purchase_bid_mw")
+    _RTM_SELL_COLS = ("rtm_sell_bid", "rtm_sell_bid_mw")
 
     def __init__(self, df_market_block: pd.DataFrame) -> None:
         self.df: pd.DataFrame = df_market_block.copy()
