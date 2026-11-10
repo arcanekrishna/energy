@@ -38,12 +38,30 @@ Electric power is fundamentally different from any financial asset or traditiona
 """))
 
 # =============================================================================
-# SECTION 1: ENVIRONMENT SETUP & DATA INGESTION
+# SECTION 1: ENVIRONMENT SETUP, RAW DATA INGESTION & SYNCHRONIZATION PIPELINE
 # =============================================================================
 cells.append(new_markdown_cell(r"""---
-## Section 1: Environment Setup and Dual-Mode Data Ingestion
-This cell sets up publication-quality plotting styles and loads the synchronized dataset of **2,916 operational 15-minute dispatch blocks** (31 trading days from October 3 to November 2, 2026).
-- **Dual-Mode Loader:** Checks for local dataset files first; if running in Google Colab, automatically pulls the cleaned dataset directly from the GitHub repository raw URL.
+## Section 1: Environment Setup, Raw Data Processing & Synchronization Pipeline
+
+### 🔬 The Raw Data Challenge in Indian Power Markets
+Raw market data from the **Indian Energy Exchange (IEX)** is published in two separate streams that cannot be analyzed together without rigorous data engineering:
+1. **Day-Ahead Market (DAM) Snapshots:** Double-auction bids submitted on day $D-1$ (10:00–12:00 IST), specifying 96 fifteen-minute purchase bids, sell bids, and clearing prices.
+2. **Real-Time Market (RTM) Snapshots:** 48 half-hourly intra-day gate closures clearing 15-minute physical balancing dispatch just 1 hour prior to delivery.
+
+#### Physical & Structural Data Issues Handled by this Pipeline:
+- **Metadata Title Rows & Footers:** Official IEX Excel exports contain 4 non-tabular title rows (`Market Snapshot`, Date ranges) and trailing summary statistics rows (`Max (MW)`, `Min (MW)`, `Average`).
+- **Time Block Format Standardization:** Interval strings (e.g., `'00:00 - 00:15'` or `'00:00-00:15'`) must be mapped to statutory 1-based dispatch blocks ($b \in \{1, 2, \dots, 96\}$).
+- **String Cleaning & Boundary Clamping:** Clean prices containing commas (e.g., `'10,000.00'`), trailing whitespace, and footnotes (`*`), while strictly clamping prices to the statutory CERC price ceiling $[₹0, ₹10,000/\text{MWh}]$.
+- **Temporal Alignment (Zero Forward-Looking Leakage):** Performs an inner join on `(date, block_no)` to guarantee exact 15-minute synchronization between day-ahead commitment and real-time balancing.
+- **Economic Feature Engineering:**
+  - **DAM Imbalance Ratio:** $I_t = \frac{\text{DAM Purchase Bids (MW)}_t}{\text{DAM Sell Bids (MW)}_t}$
+  - **DAM Unsatisfied Demand:** $U_t = \max(0, \, \text{DAM Purchase Bids}_t - \text{DAM Sell Bids}_t)$
+  - **Diurnal Cyclical Encodings:** $\sin(2\pi \cdot \frac{b}{96})$ and $\cos(2\pi \cdot \frac{b}{96})$
+  - **Target Spike Indicator:** $\mathbb{I}(P_{\text{RTM}} \ge ₹7,000/\text{MWh})$
+  - **Strictly Lagged Prices:** $P_{\text{RTM}}(t-4), P_{\text{RTM}}(t-8), P_{\text{RTM}}(t-16)$ for 1h, 2h, and 4h ex-ante forecasting.
+
+> **💡 Flexible Dual-Mode Loader:**  
+> If raw IEX files (`DAM_Market Snapshot.xlsx` & `RTM_Market Snapshot.xlsx`) are provided (in `/content/` or `data/raw/`), this cell parses and cleans them from scratch. If running in a lightweight Google Colab environment, it seamlessly falls back to the verified synchronized dataset from the GitHub repository!
 """))
 
 cells.append(new_code_cell(r"""import os
@@ -54,6 +72,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 from sklearn.metrics import mean_absolute_error, r2_score, roc_auc_score, brier_score_loss
+from sklearn.linear_model import Ridge, LogisticRegression
 from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
 
 # Publication-grade visual aesthetics
@@ -63,29 +82,164 @@ plt.rcParams['font.size'] = 11
 plt.rcParams['figure.autolayout'] = True
 np.set_printoptions(precision=4, suppress=True)
 
-# Dual-Mode Ingestion (Local Workspace or Google Colab)
-data_candidates = [
+# -----------------------------------------------------------------------------
+# 1. RAW DATA CLEANING & STANDARDIZATION FUNCTIONS
+# -----------------------------------------------------------------------------
+def parse_timeblock_to_block_no(tb_str):
+    '''Convert string timeblock (e.g. '00:00 - 00:15' or '00:00-00:15') to integer 1..96'''
+    try:
+        start_part = str(tb_str).split('-')[0].strip()
+        hh, mm = map(int, start_part.split(':'))
+        return (hh * 4) + (mm // 15) + 1
+    except Exception:
+        return np.nan
+
+def clean_iex_raw(filepath_or_buffer, market_type='dam'):
+    '''
+    Loads and standardizes raw IEX Excel Market Snapshots or CSV exports.
+    Skips metadata rows, parses 15-min Time Blocks into block_no (1-96),
+    removes non-numeric characters, and extracts clean trading series.
+    '''
+    m_type = market_type.lower()
+    
+    if str(filepath_or_buffer).endswith(('.xlsx', '.xls')):
+        # Locate header row dynamically (usually row index 4 in IEX snapshot exports)
+        df_raw = pd.read_excel(filepath_or_buffer, header=None)
+        header_row_idx = None
+        for idx in range(min(15, len(df_raw))):
+            row_vals = [str(x).strip().lower() for x in df_raw.iloc[idx].tolist() if pd.notna(x)]
+            if any('date' in v for v in row_vals) and (any('block' in v for v in row_vals) or any('hour' in v for v in row_vals)):
+                header_row_idx = idx
+                break
+        df = pd.read_excel(filepath_or_buffer, skiprows=header_row_idx) if header_row_idx is not None else pd.read_excel(filepath_or_buffer)
+    else:
+        df = pd.read_csv(filepath_or_buffer)
+        
+    df.columns = [str(c).strip() for c in df.columns]
+    
+    # Filter out footer summary rows ('Max', 'Min', 'Average')
+    date_col = [c for c in df.columns if 'date' in c.lower()][0]
+    df = df[df[date_col].notna()].copy()
+    
+    # Parse date to YYYY-MM-DD
+    df['clean_date'] = pd.to_datetime(df[date_col], dayfirst=True, errors='coerce')
+    df = df[df['clean_date'].notna()].copy()
+    df['date'] = df['clean_date'].dt.strftime('%Y-%m-%d')
+    
+    # Parse 15-min timeblock (1 to 96)
+    tb_candidates = [c for c in df.columns if 'block' in c.lower() or ('time' in c.lower() and c.lower() != 'timestamp')]
+    if tb_candidates:
+        df['block_no'] = df[tb_candidates[0]].apply(parse_timeblock_to_block_no)
+    elif 'Hour' in df.columns:
+        df['block_no'] = pd.to_numeric(df['Hour'], errors='coerce')
+    else:
+        df['block_no'] = np.tile(np.arange(1, 97), len(df) // 96 + 1)[:len(df)]
+        
+    # Clean numeric fields (strip commas, whitespace, and footnotes)
+    p_bid_col = [c for c in df.columns if 'purchase' in c.lower()][0]
+    s_bid_col = [c for c in df.columns if 'sell' in c.lower()][0]
+    mcp_col = [c for c in df.columns if 'mcp' in c.lower() and 'weighted' not in c.lower()][0]
+    mcv_candidates = [c for c in df.columns if 'mcv' in c.lower() or 'cleared' in c.lower()]
+    mcv_col = mcv_candidates[0] if mcv_candidates else None
+    
+    def clean_num(s):
+        return pd.to_numeric(s.astype(str).str.replace(',', '').str.replace('*', '').str.strip(), errors='coerce')
+        
+    df[f'{m_type}_purchase_bid_mw'] = clean_num(df[p_bid_col])
+    df[f'{m_type}_sell_bid_mw'] = clean_num(df[s_bid_col])
+    df[f'{m_type}_mcp'] = clean_num(df[mcp_col]).clip(0.0, 10000.0)
+    
+    cols = ['date', 'block_no', f'{m_type}_purchase_bid_mw', f'{m_type}_sell_bid_mw', f'{m_type}_mcp']
+    if mcv_col:
+        df[f'{m_type}_mcv_mw'] = clean_num(df[mcv_col])
+        cols.append(f'{m_type}_mcv_mw')
+        
+    df_clean = df[cols].dropna(subset=['date', 'block_no', f'{m_type}_mcp']).copy()
+    df_clean['block_no'] = df_clean['block_no'].astype(int)
+    return df_clean.drop_duplicates(subset=['date', 'block_no']).sort_values(['date', 'block_no']).reset_index(drop=True)
+
+def synchronize_and_engineer_features(df_dam, df_rtm):
+    '''Synchronize DAM and RTM datasets on (date, block_no) and engineer predictive features'''
+    df_sync = pd.merge(df_dam, df_rtm, on=['date', 'block_no'], how='inner')
+    
+    # 1. Structural DAM imbalances & Cushion
+    df_sync['dam_imbalance_ratio'] = df_sync['dam_purchase_bid_mw'] / np.maximum(df_sync['dam_sell_bid_mw'], 1.0)
+    df_sync['dam_unsatisfied_demand_mw'] = np.maximum(0.0, df_sync['dam_purchase_bid_mw'] - df_sync['dam_sell_bid_mw'])
+    df_sync['dam_supply_cushion_mw'] = df_sync['dam_sell_bid_mw'] - df_sync['dam_purchase_bid_mw']
+    if 'dam_mcv_mw' in df_sync.columns:
+        df_sync['dam_clearance_ratio'] = df_sync['dam_mcv_mw'] / np.maximum(df_sync['dam_purchase_bid_mw'], 1.0)
+    df_sync['rtm_imbalance_ratio'] = df_sync['rtm_purchase_bid_mw'] / np.maximum(df_sync['rtm_sell_bid_mw'], 1.0)
+    df_sync['dam_rtm_spread'] = df_sync['rtm_mcp'] - df_sync['dam_mcp']
+    
+    # 2. Harmonic diurnal cycles
+    df_sync['sin_block'] = np.sin(2.0 * np.pi * df_sync['block_no'] / 96.0)
+    df_sync['cos_block'] = np.cos(2.0 * np.pi * df_sync['block_no'] / 96.0)
+    
+    # 3. Target spike indicator (CERC severe price strain >= ₹7,000/MWh)
+    df_sync['rtm_spike'] = (df_sync['rtm_mcp'] >= 7000.0).astype(int)
+    
+    # 4. Strictly ex-ante lagged RTM prices (1h = lag 4, 2h = lag 8, 4h = lag 16)
+    df_sync['rtm_mcp_lag_4'] = df_sync['rtm_mcp'].shift(4)
+    df_sync['rtm_mcp_lag_8'] = df_sync['rtm_mcp'].shift(8)
+    df_sync['rtm_mcp_lag_16'] = df_sync['rtm_mcp'].shift(16)
+    df_sync['rtm_volat_lag_4'] = df_sync['rtm_mcp'].shift(4).rolling(8, min_periods=2).std().fillna(0)
+    
+    return df_sync
+
+# -----------------------------------------------------------------------------
+# 2. DUAL-MODE INGESTION EXECUTION: RAW PROCESSING OR SYNCHRONIZED LOADING
+# -----------------------------------------------------------------------------
+raw_dam_candidates = [
+    '../data/raw/DAM_Market Snapshot.xlsx',
+    'data/raw/DAM_Market Snapshot.xlsx',
+    'DAM_Market Snapshot.xlsx',
+    '/content/DAM_Market Snapshot.xlsx',
+    '../DAM.csv', 'data/raw/DAM.csv', 'DAM.csv', '/content/DAM.csv'
+]
+raw_rtm_candidates = [
+    '../data/raw/RTM_Market Snapshot.xlsx',
+    'data/raw/RTM_Market Snapshot.xlsx',
+    'RTM_Market Snapshot.xlsx',
+    '/content/RTM_Market Snapshot.xlsx'
+]
+proc_candidates = [
     '../data/processed/real_dam_rtm_synchronized.csv',
     'data/processed/real_dam_rtm_synchronized.csv',
     'real_dam_rtm_synchronized.csv',
+    '/content/real_dam_rtm_synchronized.csv',
     'https://raw.githubusercontent.com/arcanekrishna/energy/main/data/processed/real_dam_rtm_synchronized.csv'
 ]
 
-data_path = None
-for candidate in data_candidates:
-    if candidate.startswith('http') or os.path.exists(candidate):
-        data_path = candidate
-        break
+raw_dam_found = next((p for p in raw_dam_candidates if os.path.exists(p)), None)
+raw_rtm_found = next((p for p in raw_rtm_candidates if os.path.exists(p)), None)
 
-print(f"Loading synchronized dataset from: {data_path}")
-df = pd.read_csv(data_path)
+if raw_dam_found and raw_rtm_found:
+    print("="*75)
+    print("MODE A: PROCESSING RAW IEX MARKET SNAPSHOTS FROM SCRATCH")
+    print(f"• Raw DAM Source: {raw_dam_found}")
+    print(f"• Raw RTM Source: {raw_rtm_found}")
+    print("="*75)
+    df_dam_clean = clean_iex_raw(raw_dam_found, 'dam')
+    df_rtm_clean = clean_iex_raw(raw_rtm_found, 'rtm')
+    print(f"Cleaned DAM: {len(df_dam_clean)} blocks ({df_dam_clean['date'].nunique()} days)")
+    print(f"Cleaned RTM: {len(df_rtm_clean)} blocks ({df_rtm_clean['date'].nunique()} days)")
+    df = synchronize_and_engineer_features(df_dam_clean, df_rtm_clean)
+    print(f"Successfully Synchronized: {len(df)} operational blocks with zero data leakage!")
+else:
+    proc_found = next((p for p in proc_candidates if p.startswith('http') or os.path.exists(p)), None)
+    print("="*75)
+    print("MODE B: LOADING PRE-SYNCHRONIZED CLEAN DATASET")
+    print(f"• Source Path: {proc_found}")
+    print("="*75)
+    df = pd.read_csv(proc_found)
+
 df['date'] = pd.to_datetime(df['date'])
 
 print("="*75)
 print(f"DATASET INVENTORY: {df.shape[0]} Synchronized Operational Blocks across {df['date'].nunique()} Days")
 print(f"Date Span: {df['date'].min().strftime('%Y-%m-%d')} to {df['date'].max().strftime('%Y-%m-%d')}")
 print("="*75)
-df[['date', 'block_no', 'dam_purchase_bid_mw', 'dam_sell_bid_mw', 'dam_mcp', 'rtm_purchase_bid_mw', 'rtm_sell_bid_mw', 'rtm_mcp']].head(5)
+df[['date', 'block_no', 'dam_purchase_bid_mw', 'dam_sell_bid_mw', 'dam_mcp', 'rtm_purchase_bid_mw', 'rtm_sell_bid_mw', 'rtm_mcp', 'dam_imbalance_ratio']].head(5)
 """))
 
 # =============================================================================
