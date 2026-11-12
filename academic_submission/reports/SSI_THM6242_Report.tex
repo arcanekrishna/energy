@@ -33,14 +33,8 @@
 \definecolor{teal}{RGB}{0,105,92}
 \definecolor{lightbg}{RGB}{245,248,252}
 
-% ── Header/Footer ──
-\pagestyle{fancy}
-\fancyhf{}
-\fancyhead[L]{\small\textcolor{navy}{\textbf{SSI | THM6242: Applied Probability Distributions}}}
-\fancyhead[R]{\small\textcolor{navy}{Group 05}}
-\fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0.5pt}
-\renewcommand{\footrulewidth}{0.3pt}
+% ── Header/Footer (Clean pages: no top header bar, centered page numbers at bottom) ──
+\pagestyle{plain}
 
 % ── Section Formatting ──
 \titleformat{\section}{\Large\bfseries\color{navy}}{\thesection}{1em}{}
@@ -79,45 +73,49 @@
 % =====================================================================
 \begin{titlepage}
     \centering
-    \vspace*{0.5cm}
+    \vspace*{0.2cm}
 
-    {\Large\textbf{PROJECT TITLE:}}\\[0.4cm]
-    {\LARGE\textcolor{navy}{\textbf{Empirical Characterization and Probabilistic Modeling of\\[0.2cm]
-    Price Formation, Extreme Volatility, and Daily Spike Dynamics\\[0.2cm]
+    {\Large\textbf{PROJECT TITLE:}}\\[0.3cm]
+    {\LARGE\textcolor{navy}{\textbf{Empirical Characterization and Probabilistic Modeling of\\[0.15cm]
+    Price Formation, Extreme Volatility, and Daily Spike Dynamics\\[0.15cm]
     in the Indian Electricity Market (IEX)}}}
 
-    \vspace{1cm}
+    \vspace{0.75cm}
 
-    {\large\textbf{ORGANIZATION / DEPARTMENT NAME \& ADDRESS}}\\[0.3cm]
+    {\large\textbf{ORGANIZATION / DEPARTMENT NAME \& ADDRESS}}\\[0.25cm]
     {\large SYMBIOSIS STATISTICAL INSTITUTE --- Symbiosis International\\
     (Deemed University), Vishwabhavan Campus, 3rd Floor, SCHC Building,\\
     Senapati Bapat Rd, Pune, Maharashtra 411004}
 
-    \vspace{1cm}
+    \vspace{0.75cm}
 
-    {\large\textbf{SUBMITTED BY}}\\[0.3cm]
+    {\large\textbf{SUBMITTED BY}}\\[0.25cm]
     {\large Ms/Mr.~\underline{\hspace{4cm}}}\\[0.15cm]
     {\large M.Sc.\ (Applied Statistics \& Data Science)}\\[0.15cm]
     {\large PRN: \underline{\hspace{3cm}}}\\[0.15cm]
     {\large Email-id: \underline{\hspace{5cm}}}
 
-    \vspace{1cm}
+    \vspace{0.65cm}
+
+    \includegraphics[width=0.58\textwidth]{ssi_logo.png}
+
+    \vspace{0.65cm}
 
     {\Large\textbf{ACADEMIC YEAR 2026 -- 2027}}
 
-    \vspace{1cm}
+    \vspace{0.75cm}
 
-    {\large Under the guidance of}\\[0.3cm]
+    {\large Under the guidance of}\\[0.25cm]
     {\large\textbf{Dr.\ MONIKA VISHNOI}}\\[0.15cm]
     {\large Designation: Assistant Professor}\\[0.15cm]
     {\large Email Id: monika.vishnoi@ssi.edu.in}
 
-    \vspace{1cm}
+    \vspace{0.65cm}
 
     {\large\textbf{Course: Applied Probability Distributions (THM6242)}}\\[0.15cm]
     {\large Component III \& IV Deliverable: Project \& Viva Practical Notebook}
 
-    \vspace{0.8cm}
+    \vspace{0.5cm}
 
     {\small Associated Production System: \url{https://github.com/arcanekrishna/energy}}
 
